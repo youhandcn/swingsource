@@ -1,0 +1,231 @@
+package org.yccheok.blobsallad;
+
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.awt.geom.Point2D;
+import java.util.Timer;
+import java.util.TimerTask;
+
+/**
+ */
+public class Controller {
+	private Environment env = new Environment(0.2, 0.2, 2.6, 1.6);
+	private final double scaleFactor = 200.0;
+	private BlobCollective blobColl = new BlobCollective(1.0, 1.0, 200);
+	private Vector gravity = new Vector(0.0, 10.0);
+	private volatile boolean stopped = false;
+	private Point2D.Double savedMouseCoords = null;
+	private Point2D.Double selectOffset = null;
+	private final View view;
+	private Timer timer;
+
+	private void toggleGravity() {
+		if (gravity.getY() > 0.0) {
+			gravity.setY(0.0);
+		} else {
+			gravity.setY(10.0);
+		}
+	}
+
+	public void stop() {
+		stopped = true;
+	}
+
+	public void start() {
+		stopped = false;
+		timeout();
+	}
+
+	public void update() {
+		double dt = 0.05;
+
+		if (savedMouseCoords != null && selectOffset != null) {
+			blobColl.selectedBlobMoveTo(savedMouseCoords.getX()
+					- selectOffset.getX(), savedMouseCoords.getY()
+					- selectOffset.getY());
+		}
+
+		blobColl.move(dt);
+		blobColl.sc(env);
+		blobColl.setForce(gravity);
+	}
+
+	public void paintComponent(Graphics graphics) {
+		final int width = view.getWidth();
+		final int height = view.getHeight();
+
+		// View is resizable. We need to update accordingly.
+		// Our offset is 0.2 (40 / scaleFactor)
+		// Hence, offset the entire size with 40 * 2.
+		this.env = env.setWidth((width - 80.0) / scaleFactor).setHeight(
+				(height - 80.0) / scaleFactor);
+
+		graphics.clearRect(0, 0, view.getWidth(), view.getHeight());
+		Graphics2D g2d = (Graphics2D) graphics.create();
+		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+				RenderingHints.VALUE_ANTIALIAS_ON);
+		env.draw(g2d, scaleFactor);
+		blobColl.draw(g2d, scaleFactor);
+		g2d.dispose();
+	}
+
+	public void draw() {
+		this.view.repaint();
+	}
+
+	private void timeout() {
+		if (timer != null) {
+			timer.cancel();
+		}
+
+		timer = new Timer();
+		timer.schedule(new TimerTask() {
+			@Override
+			public void run() {
+				draw();
+				update();
+
+				if (stopped) {
+					cancel();
+				}
+			}
+
+		}, 0, 30);
+	}
+
+	public Controller() {
+		this.view = new View(this);
+		this.view.setDoubleBuffered(true);
+		this.view.addKeyListener(new KeyListener() {
+
+			public void keyTyped(KeyEvent e) {
+			}
+
+			public void keyPressed(KeyEvent e) {
+				final int code = e.getKeyCode();
+				switch (code) {
+				case KeyEvent.VK_LEFT:
+					blobColl.addForce(new Vector(-50.0, 0.0));
+					break;
+				case KeyEvent.VK_UP:
+					blobColl.addForce(new Vector(0, -50.0));
+					break;
+				case KeyEvent.VK_RIGHT:
+					blobColl.addForce(new Vector(50.0, 0.0));
+					break;
+				case KeyEvent.VK_DOWN:
+					blobColl.addForce(new Vector(0.0, 50.0));
+					break;
+				case KeyEvent.VK_J:
+					blobColl.join();
+					break;
+				case KeyEvent.VK_H:
+					blobColl.split();
+					break;
+				case KeyEvent.VK_G:
+					toggleGravity();
+					break;
+				default:
+					break;
+				}
+			}
+
+			public void keyReleased(KeyEvent e) {
+			}
+
+		});
+
+		this.view.addMouseMotionListener(new MouseMotionListener() {
+
+			public void mouseDragged(MouseEvent e) {
+				Point2D.Double mouseCoords;
+
+				if (stopped == true) {
+					return;
+				}
+				if (selectOffset == null) {
+					return;
+				}
+
+				mouseCoords = getMouseCoords(e);
+
+				if (mouseCoords == null) {
+					return;
+				}
+
+				blobColl.selectedBlobMoveTo(mouseCoords.getX()
+						- selectOffset.getX(), mouseCoords.getY()
+						- selectOffset.getY());
+
+				savedMouseCoords = mouseCoords;
+			}
+
+			public void mouseMoved(MouseEvent e) {
+			}
+		});
+
+		this.view.addMouseListener(new MouseListener() {
+
+			public void mouseClicked(MouseEvent e) {
+				requestFocus();
+			}
+
+			public void mousePressed(MouseEvent e) {
+				Point2D.Double mouseCoords;
+
+				if (stopped == true) {
+					return;
+				}
+				mouseCoords = getMouseCoords(e);
+				if (mouseCoords == null) {
+					return;
+				}
+
+				selectOffset = blobColl.selectBlob(mouseCoords.getX(),
+						mouseCoords.getY());
+			}
+
+			public void mouseReleased(MouseEvent e) {
+				blobColl.unselectBlob();
+				savedMouseCoords = null;
+				selectOffset = null;
+			}
+
+			public void mouseEntered(MouseEvent e) {
+			}
+
+			public void mouseExited(MouseEvent e) {
+			}
+		});
+
+		this.requestFocus();
+		this.start();
+	}
+
+	public Point2D.Double getMouseCoords(MouseEvent e) {
+		return new Point2D.Double((double) e.getX() / scaleFactor, (double) e
+				.getY()
+				/ scaleFactor);
+	}
+
+	public void requestFocus() {
+		System.out.println("requestFocus");
+		/*
+		 * We do all these duplicated stuff, to ensure applet will run well in
+		 * all browsers.
+		 */
+		this.view.setFocusable(true);
+		this.view.requestFocus();
+		this.view.requestFocusInWindow();
+	}
+
+	public View getView() {
+		return this.view;
+	}
+}

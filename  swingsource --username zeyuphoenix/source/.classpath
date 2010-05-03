@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="commandbutton"/>
+	<classpathentry kind="src" path="swingdemo"/>
+	<classpathentry kind="src" path="layout"/>
+	<classpathentry kind="src" path="javadate"/>
+	<classpathentry kind="src" path="sunsimple"/>
+	<classpathentry kind="src" path="tree"/>
+	<classpathentry kind="src" path="study"/>
+	<classpathentry kind="src" path="time"/>
+	<classpathentry kind="src" path="booksource"/>
+	<classpathentry kind="src" path="treetable"/>
+	<classpathentry kind="src" path="lock"/>
+	<classpathentry kind="src" path="image"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
